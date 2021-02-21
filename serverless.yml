@@ -1,0 +1,66 @@
+service: retoTecnico
+
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  lambdaHashingVersion: 20201221
+  stage: dev
+  region: us-east-1
+  profile: retoTecnicoPersona
+  environment:
+    PERSONAS_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+      Resource: "*"
+
+resources:
+  Resources:
+    PersonasDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "id"
+            AttributeType: "S"   
+        KeySchema:
+          -
+            AttributeName: "id"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.PERSONAS_TABLE}
+
+functions:
+  personaRegistrar:
+    handler: api/persona.submit
+    memorySize: 128
+    description: Registrar Persona.
+    events:
+      - http: 
+          path: personas
+          method: post
+  listaPersonas:
+    handler: api/persona.list
+    memorySize: 128
+    description: Listar Personas
+    events:
+      - http: 
+          path: personas-listado
+          method: get
+          cors: true
+  personaDetalle:
+    handler: api/persona.get
+    description: Buscar Persona
+    events:
+      - http:
+          path: personas/{id}
+          method: get
